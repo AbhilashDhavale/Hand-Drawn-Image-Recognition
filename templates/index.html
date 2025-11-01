@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Drawing Recognition</title>
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Roboto', sans-serif;
+            background: linear-gradient(135deg, #89f7fe, #66a6ff);
+            text-align: center;
+            margin: 0;
+            padding: 0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            min-height: 100vh;
+        }
+        h1 {
+            color: #fff;
+            margin-top: 30px;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+        }
+        #canvas {
+            border: 3px solid #fff;
+            border-radius: 15px;
+            background: #fff;
+            margin-top: 20px;
+            box-shadow: 0 10px 20px rgba(0,0,0,0.2);
+            cursor: crosshair;
+        }
+        .buttons { margin-top: 20px; }
+        button {
+            padding: 12px 25px;
+            margin: 5px;
+            font-size: 16px;
+            border: none;
+            border-radius: 8px;
+            background-color: #ff7e5f;
+            color: white;
+            cursor: pointer;
+            transition: 0.3s;
+        }
+        button:hover { background-color: #eb5757; }
+    </style>
+</head>
+<body>
+    <h1>Draw Either Sun, Flower, Hand, Face using Cursor</h1>
+    <canvas id="canvas" width="280" height="280"></canvas>
+    <div class="buttons">
+        <button onclick="predict()">Predict & Show Fuzzy</button>
+        <button onclick="clearCanvas()">Clear</button>
+    </div>
+
+    <script>
+        const canvas = document.getElementById("canvas");
+        const ctx = canvas.getContext("2d");
+        let drawing = false;
+
+        ctx.fillStyle = "white";
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+        canvas.addEventListener("mousedown", e => { drawing = true; ctx.beginPath(); ctx.moveTo(e.offsetX, e.offsetY); });
+        canvas.addEventListener("mouseup", () => drawing = false);
+        canvas.addEventListener("mouseout", () => drawing = false);
+        canvas.addEventListener("mousemove", e => {
+            if (!drawing) return;
+            ctx.lineTo(e.offsetX, e.offsetY);
+            ctx.strokeStyle = "black";  // visible color
+            ctx.lineWidth = 15;         // thick brush for correct prediction
+            ctx.lineCap = "round";
+            ctx.stroke();
+        });
+
+        function clearCanvas() {
+            ctx.fillStyle = "white";
+            ctx.fillRect(0,0,canvas.width,canvas.height);
+        }
+
+        function predict() {
+            const imgData = canvas.toDataURL("image/png");
+            fetch("/predict", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ image: imgData })
+            })
+            .then(res => res.json())
+            .then(data => {
+                sessionStorage.setItem("drawing", imgData);
+                sessionStorage.setItem("prediction", data.prediction);
+                sessionStorage.setItem("fuzzy", JSON.stringify(data.fuzzy));
+                window.location.href = "/fuzzy";
+            })
+            .catch(err => console.error(err));
+        }
+    </script>
+</body>
+</html>
